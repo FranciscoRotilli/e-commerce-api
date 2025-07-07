@@ -1,0 +1,151 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  //Basic information
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String
+
+  //Password and access
+  password             String
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+  role                 UserRole  @default(USER)
+
+  //Personal information
+  cpf       String?   @unique
+  phone     String?
+  birthDate DateTime?
+  addresses Adress[]
+
+  //Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model Adress {
+  id           String  @id @default(cuid())
+  street       String
+  number       String
+  complement   String?
+  neighborhood String
+  city         String
+  state        String
+  zipCode      String
+  isPrimary    Boolean @default(false)
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+}
+
+model Product {
+  //Basic information
+  id          String @id @default(cuid())
+  name        String
+  description String
+  sku         String @unique
+
+  //Status and stock
+  status        ProductStatus @default(ACTIVE)
+  stockQuantity Int           @default(9)
+
+  //Price
+  oldPrice     Decimal @db.Decimal(10, 2)
+  currentPrice Decimal @db.Decimal(10, 2)
+
+  //Dimentions and weight
+  weightInGrams Int?
+  widthInMm     Int?
+  heightInMm    Int?
+  lengthInMm    Int?
+
+  //Marketing information
+  slug       String            @unique
+  images     ProductImage[]
+  tags       String[]
+  categories ProductCategory[]
+
+  //Metadata
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  
+  OrderItem OrderItem[]
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  DRAFT
+}
+
+model Category {
+  id       String            @id @default(cuid())
+  name     String            @unique
+  slug     String            @unique
+  products ProductCategory[]
+}
+
+model ProductCategory {
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@id([productId, categoryId])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  url       String
+  altText   String?
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Order {
+  id        String   @id @default(cuid())
+  total     Decimal  @db.Decimal(10, 2)
+  status    String // PENDING, PAID, SHIPPED, DELIVERED, CANCELED
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  // Detalhes do pedido (os produtos comprados)
+  items OrderItem[]
+}
+
+// Tabela de junção para os itens do pedido
+model OrderItem {
+  id       String  @id @default(cuid())
+  quantity Int
+  price    Decimal @db.Decimal(10, 2)
+
+  order   Order  @relation(fields: [orderId], references: [id])
+  orderId String
+
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+}
