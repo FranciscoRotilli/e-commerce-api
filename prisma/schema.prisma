@@ -125,10 +125,10 @@ model ProductImage {
 }
 
 model Order {
-  id        String   @id @default(cuid())
-  total     Decimal  @db.Decimal(10, 2)
-  status    String // PENDING, PAID, SHIPPED, DELIVERED, CANCELED
-  createdAt DateTime @default(now())
+  id        String      @id @default(cuid())
+  total     Decimal     @db.Decimal(10, 2)
+  status    OrderStatus @default(PENDING)
+  createdAt DateTime    @default(now())
 
   user   User   @relation(fields: [userId], references: [id])
   userId String
@@ -148,4 +148,12 @@ model OrderItem {
 
   product   Product @relation(fields: [productId], references: [id])
   productId String
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELED
 }

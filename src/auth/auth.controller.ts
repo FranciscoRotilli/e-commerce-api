@@ -12,6 +12,7 @@ import { LoginDto } from './dto/login.dto';
 import { Roles } from './decorators/roles.decorator';
 import { Request } from 'express';
 import { Public } from './decorators/public.decorator';
+import { JwtPayload } from './interfaces/jwtPayload.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -31,6 +32,6 @@ export class AuthController {
   @Roles('USER', 'ADMIN')
   @Get('profile')
   getProfile(@Req() request: Request) {
-    return request.user;
+    return this.authService.getProfile(request.user as JwtPayload);
   }
 }
