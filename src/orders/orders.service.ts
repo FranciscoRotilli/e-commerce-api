@@ -67,7 +67,6 @@ export class OrdersService {
         data: {
           userId: userId,
           total: total,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
           status: OrderStatus.PENDING,
           items: {
             create: items.map((item) => {
@@ -133,7 +132,6 @@ export class OrdersService {
       return await this.prisma.order.update({
         where: { id },
         data: {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           status: updateOrderDto.status,
         },
       });

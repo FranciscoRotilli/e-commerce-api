@@ -11,7 +11,13 @@ import { OrdersModule } from './orders/orders.module';
 import { CategoriesModule } from './categories/categories.module';
 
 @Module({
-  imports: [AuthModule, UsersModule, ProductsModule, OrdersModule, CategoriesModule],
+  imports: [
+    AuthModule,
+    UsersModule,
+    ProductsModule,
+    OrdersModule,
+    CategoriesModule,
+  ],
   controllers: [AppController],
   providers: [
     AppService,
