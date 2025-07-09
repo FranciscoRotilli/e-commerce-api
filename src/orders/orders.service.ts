@@ -8,10 +8,10 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Decimal } from 'generated/prisma/runtime/library';
-import { Order, OrderStatus, Prisma } from 'generated/prisma';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { OrderStatus, Prisma } from 'generated/prisma';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { paginate } from 'src/common/utils/paginator';
+import { SearchOrdersDto } from './dto/search-order.dto';
 
 const validTransitions: Record<OrderStatus, OrderStatus[]> = {
   PENDING: ['PAID', 'CANCELED'],
@@ -130,23 +130,54 @@ export class OrdersService {
     });
   }
 
-  async findAllByUser(userId: string, pagination: PaginationDto) {
-    return await paginate<Order>(
+  async findAll(filters: SearchOrdersDto, user: JwtPayload) {
+    const {
+      page,
+      limit,
+      search,
+      status,
+      minDate,
+      maxDate,
+      sortBy,
+      sortOrder,
+      userId,
+    } = filters;
+
+    const whereClause: Prisma.OrderWhereInput = {};
+
+    if (user.role === 'ADMIN') {
+      if (userId) {
+        whereClause.userId = userId;
+      }
+    } else {
+      whereClause.userId = user.sub;
+    }
+
+    if (search) whereClause.id = { contains: search, mode: 'insensitive' };
+    if (status) whereClause.status = status;
+    if (minDate || maxDate) {
+      whereClause.createdAt = {};
+      if (minDate) whereClause.createdAt.gte = minDate;
+      if (maxDate) whereClause.createdAt.lte = maxDate;
+    }
+
+    const orderByClause: Prisma.OrderOrderByWithRelationInput = {};
+    const allowedSortBy = ['createdAt', 'total', 'status'];
+    if (sortBy && allowedSortBy.includes(sortBy)) {
+      orderByClause[sortBy] = sortOrder ?? 'desc';
+    } else {
+      orderByClause.createdAt = 'desc';
+    }
+
+    return await paginate(
       this.prisma.order,
+      { page, limit },
       {
-        page: pagination.page,
-        limit: pagination.limit,
-      },
-      {
-        where: { userId },
+        where: whereClause,
+        orderBy: orderByClause,
         include: {
-          items: {
-            include: {
-              product: {
-                select: { name: true, slug: true },
-              },
-            },
-          },
+          user: { select: { id: true, name: true, email: true } },
+          items: true,
         },
       },
     );
@@ -202,29 +233,5 @@ export class OrdersService {
       }
       throw error;
     }
-  }
-
-  async findAllAdmin(pagination: PaginationDto) {
-    return await paginate<Order>(
-      this.prisma.order,
-      {
-        page: pagination.page,
-        limit: pagination.limit,
-      },
-      {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      },
-    );
   }
 }

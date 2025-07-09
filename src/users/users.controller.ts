@@ -15,7 +15,7 @@ import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { SearchUsersDto } from './dto/search-users.dto';
 
 @Controller('users')
 export class UsersController {
@@ -49,8 +49,8 @@ export class UsersController {
 
   @Get()
   @Roles('ADMIN')
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.usersService.findAll(paginationDto);
+  findAll(@Query() pagination: SearchUsersDto) {
+    return this.usersService.findAll(pagination);
   }
 
   @Get(':id')

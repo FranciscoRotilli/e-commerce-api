@@ -48,16 +48,6 @@ export class CategoriesController {
     return this.categoriesService.findOneBySlug(slug, user);
   }
 
-  @Get(':slug/products')
-  @Public()
-  findProductsByCategory(
-    @Param('slug') slug: string,
-    @Query() paginationDto: PaginationDto,
-    @CurrentUser() user: JwtPayload | undefined,
-  ) {
-    return this.productsService.findAllByCategory(slug, paginationDto, user);
-  }
-
   @Post(':id/status')
   @Roles('ADMIN')
   switchStatus(@Param('id') id: string) {

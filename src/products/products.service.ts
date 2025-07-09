@@ -6,13 +6,13 @@ import {
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Prisma, Product, ProductStatus } from 'generated/prisma';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { Prisma, ProductStatus } from 'generated/prisma';
 import { AddCategoryDto } from './dto/add-category.dto';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { publicProductSelect } from './util/select';
 import { UpdateProductStatusDto } from './dto/update-product-status.dto';
 import { paginate } from 'src/common/utils/paginator';
+import { FilterProductsDto } from './dto/filter-product.dto';
 
 @Injectable()
 export class ProductsService {
@@ -36,19 +36,60 @@ export class ProductsService {
     }
   }
 
-  async findAll(pagination: PaginationDto, user: JwtPayload | undefined) {
+  async findAll(pagination: FilterProductsDto, user: JwtPayload | undefined) {
+    const {
+      page,
+      limit,
+      search,
+      categoryId,
+      minPrice,
+      maxPrice,
+      sortBy,
+      sortOrder,
+    } = pagination;
+
     const select = user?.role === 'ADMIN' ? undefined : publicProductSelect;
-    return paginate<Product>(
+    const whereClause: Prisma.ProductWhereInput = {};
+
+    if (user?.role !== 'ADMIN') {
+      whereClause.status = ProductStatus.ACTIVE;
+    }
+
+    if (search) {
+      whereClause.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search, mode: 'insensitive' } },
+        { tags: { has: search.toLowerCase() } },
+      ];
+    }
+
+    if (categoryId) {
+      whereClause.categories = { some: { categoryId: categoryId } };
+    }
+
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      whereClause.currentPrice = {};
+      if (minPrice !== undefined) whereClause.currentPrice.gte = minPrice;
+      if (maxPrice !== undefined) whereClause.currentPrice.lte = maxPrice;
+    }
+
+    const orderByClause: Prisma.ProductOrderByWithRelationInput = {};
+    const allowedSortBy = ['name', 'currentPrice', 'createdAt'];
+
+    if (sortBy && allowedSortBy.includes(sortBy)) {
+      orderByClause[sortBy] = sortOrder ?? 'desc';
+    } else {
+      orderByClause.createdAt = 'desc';
+    }
+
+    return paginate(
       this.prisma.product,
+      { page, limit },
       {
-        page: pagination.page,
-        limit: pagination.limit,
-      },
-      {
-        select: select,
-        orderBy: {
-          createdAt: 'desc',
-        },
+        where: whereClause,
+        select,
+        orderBy: orderByClause,
       },
     );
   }
@@ -75,34 +116,6 @@ export class ProductsService {
       throw new NotFoundException(`Product with slug "${slug}" not found.`);
     }
     return product;
-  }
-
-  async findAllByCategory(
-    categoryId: string,
-    pagination: PaginationDto,
-    user: JwtPayload | undefined,
-  ) {
-    const select = user?.role === 'ADMIN' ? undefined : publicProductSelect;
-
-    const whereClause = {
-      categories: { some: { category: { id: categoryId } } },
-      status: ProductStatus.ACTIVE,
-    };
-
-    return paginate<Product>(
-      this.prisma.product,
-      {
-        page: pagination.page,
-        limit: pagination.limit,
-      },
-      {
-        where: whereClause,
-        select: select,
-        orderBy: {
-          createdAt: 'desc',
-        },
-      },
-    );
   }
 
   async update(id: string, updateData: UpdateProductDto) {

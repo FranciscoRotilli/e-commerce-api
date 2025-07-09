@@ -4,14 +4,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { User, UserRole } from '../../generated/prisma';
+import { UserRole } from '../../generated/prisma';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { Prisma } from 'generated/prisma';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { paginate } from 'src/common/utils/paginator';
+import { SearchUsersDto } from './dto/search-users.dto';
 
 @Injectable()
 export class UsersService {
@@ -80,28 +80,45 @@ export class UsersService {
     }
   }
 
-  async findAll(pagination: PaginationDto) {
-    const users = await paginate<User>(
+  async findAll(filters: SearchUsersDto) {
+    const { page, limit, search, role, sortBy, sortOrder } = filters;
+    const whereClause: Prisma.UserWhereInput = {};
+
+    if (search) {
+      whereClause.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { cpf: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (role) {
+      whereClause.role = role;
+    }
+
+    const orderByClause: Prisma.UserOrderByWithRelationInput = {};
+    const allowedSortBy = ['name', 'email', 'createdAt'];
+
+    if (sortBy && allowedSortBy.includes(sortBy)) {
+      orderByClause[sortBy] = sortOrder ?? 'desc';
+    } else {
+      orderByClause.createdAt = 'desc';
+    }
+
+    const paginatedResult = await paginate(
       this.prisma.user,
+      { page, limit },
       {
-        page: pagination.page,
-        limit: pagination.limit,
-      },
-      {
-        orderBy: {
-          createdAt: 'desc',
-        },
+        where: whereClause,
+        orderBy: orderByClause,
       },
     );
 
-    const safeUsers = users.data.map((user) => {
-      const { password: _password, ...safeUser } = user;
-      return safeUser;
-    });
-
     return {
-      ...users,
-      data: safeUsers,
+      ...paginatedResult,
+      data: paginatedResult.data.map(
+        ({ password: _password, ...user }) => user,
+      ),
     };
   }
 

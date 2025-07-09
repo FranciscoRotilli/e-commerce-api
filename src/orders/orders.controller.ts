@@ -13,9 +13,9 @@ import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { Roles } from 'src/auth/decorators/roles.decorator';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { SearchOrdersDto } from './dto/search-order.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -32,11 +32,11 @@ export class OrdersController {
 
   @Get()
   @Roles('ADMIN', 'USER')
-  findAllByUser(
+  findAll(
     @CurrentUser() user: JwtPayload,
-    @Query() paginationDto: PaginationDto,
+    @Query() pagination: SearchOrdersDto,
   ) {
-    return this.ordersService.findAllByUser(user.sub, paginationDto);
+    return this.ordersService.findAll(pagination, user);
   }
 
   @Get(':id')
@@ -64,11 +64,5 @@ export class OrdersController {
     @Body() updateOrderStatusDto: UpdateOrderStatusDto,
   ) {
     return this.ordersService.updateStatus(id, updateOrderStatusDto);
-  }
-
-  @Get('all/list')
-  @Roles('ADMIN')
-  findAllAdmin(@Query() paginationDto: PaginationDto) {
-    return this.ordersService.findAllAdmin(paginationDto);
   }
 }

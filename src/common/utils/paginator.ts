@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-function-type */
 export interface PaginateOptions {
   page?: number;
   limit?: number;
@@ -14,10 +11,20 @@ export interface PaginatedResult<T> {
   limit: number;
 }
 
-export async function paginate<T>(
-  model: { count: Function; findMany: Function },
+type ModelDelegate = {
+  count: (args?: { where: any }) => Promise<number>;
+  findMany: (args: any) => Promise<any[]>;
+};
+
+export async function paginate<T, Where, Select>(
+  model: ModelDelegate,
   options: PaginateOptions = {},
-  queryArgs: { where?: any; select?: any; include?: any; orderBy?: any } = {},
+  queryArgs: {
+    where?: Where;
+    select?: Select;
+    include?: any;
+    orderBy?: any;
+  } = {},
 ): Promise<PaginatedResult<T>> {
   const page = options.page ?? 1;
   const limit = options.limit ?? 10;
@@ -30,5 +37,11 @@ export async function paginate<T>(
       skip: skip,
     }),
   ]);
-  return { data, total, page, limit, pages: Math.ceil(total / limit) };
+  return {
+    data: data as T[],
+    total,
+    page,
+    limit,
+    pages: Math.ceil(total / limit),
+  };
 }
