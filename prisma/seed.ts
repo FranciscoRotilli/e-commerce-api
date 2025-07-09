@@ -13,7 +13,7 @@ async function main() {
   await prisma.order.deleteMany({});
   await prisma.productCategory.deleteMany({});
   await prisma.productImage.deleteMany({});
-  await prisma.adress.deleteMany({});
+  await prisma.address.deleteMany({});
   await prisma.product.deleteMany({});
   await prisma.category.deleteMany({});
   await prisma.user.deleteMany({});
@@ -62,7 +62,7 @@ async function main() {
   // 4. Criar Endereços para os usuários
   console.log('Creating addresses...');
   for (const user of users) {
-    await prisma.adress.create({
+    await prisma.address.create({
       data: {
         userId: user.id,
         street: faker.location.streetAddress(),

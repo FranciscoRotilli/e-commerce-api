@@ -48,9 +48,14 @@ export class CategoriesService {
   }
 
   async remove(id: string) {
-    const category = await this.findOne(id);
-    return this.prisma.category.delete({
-      where: { id: category.id },
-    });
+    await this.findOne(id);
+    return this.prisma.$transaction([
+      this.prisma.productCategory.deleteMany({
+        where: { categoryId: id },
+      }),
+      this.prisma.category.delete({
+        where: { id },
+      }),
+    ]);
   }
 }

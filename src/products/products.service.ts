@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from 'generated/prisma';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { AddCategoryDto } from './dto/add-category.dto';
 
 @Injectable()
 export class ProductsService {
@@ -60,6 +65,42 @@ export class ProductsService {
         error.code === 'P2025'
       ) {
         throw new NotFoundException(`Product with ID "${id}" not found.`);
+      }
+      throw error;
+    }
+  }
+
+  async addCategory(productId: string, addCategoryDto: AddCategoryDto) {
+    const { categoryId } = addCategoryDto;
+
+    const [product, category] = await Promise.all([
+      this.prisma.product.findUnique({ where: { id: productId } }),
+      this.prisma.category.findUnique({ where: { id: categoryId } }),
+    ]);
+
+    if (!product) {
+      throw new NotFoundException(`Product with ID "${productId}" not found.`);
+    }
+    if (!category) {
+      throw new NotFoundException(
+        `Category with ID "${categoryId}" not found.`,
+      );
+    }
+    try {
+      return await this.prisma.productCategory.create({
+        data: {
+          productId: productId,
+          categoryId: categoryId,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          `This  product is already associated with this category.`,
+        );
       }
       throw error;
     }

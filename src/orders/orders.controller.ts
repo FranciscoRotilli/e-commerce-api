@@ -6,8 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  Req,
-  ParseUUIDPipe,
   Query,
   HttpCode,
   HttpStatus,
@@ -15,10 +13,10 @@ import {
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
-import { Request } from 'express';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 
 @Controller('orders')
 export class OrdersController {
@@ -26,25 +24,22 @@ export class OrdersController {
 
   @Post()
   @Roles('ADMIN', 'USER')
-  create(@Body() createOrderDto: CreateOrderDto, @Req() request: Request) {
-    const user = request.user as JwtPayload;
+  create(
+    @Body() createOrderDto: CreateOrderDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
     return this.ordersService.create(createOrderDto, user.sub);
   }
 
   @Get()
   @Roles('ADMIN', 'USER')
-  findAllByUser(@Req() request: Request) {
-    const user = request.user as JwtPayload;
+  findAllByUser(@CurrentUser() user: JwtPayload) {
     return this.ordersService.findAllByUser(user.sub);
   }
 
   @Get(':id')
   @Roles('ADMIN', 'USER')
-  findOneByUser(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Req() request: Request,
-  ) {
-    const user = request.user as JwtPayload;
+  findOneByUser(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.ordersService.findOneByUser(id, user.sub);
   }
 
@@ -52,17 +47,14 @@ export class OrdersController {
 
   @Patch(':id')
   @Roles('ADMIN')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateOrderDto: UpdateOrderDto,
-  ) {
+  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
     return this.ordersService.update(id, updateOrderDto);
   }
 
   @Delete(':id')
   @Roles('ADMIN')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id') id: string) {
     return this.ordersService.remove(id);
   }
 

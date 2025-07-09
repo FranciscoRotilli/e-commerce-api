@@ -1,0 +1,116 @@
+
+================================================
+ API Requests for Postman
+================================================
+
+**NOTA:**
+- Para as rotas que precisam de autenticação, adicione um cabeçalho (Header) na sua requisição:
+  `Authorization` com o valor `Bearer <seu_access_token>`
+
+- Substitua os valores entre `<...>` (como `<product_id_from_db>`) por IDs reais do seu banco de dados após executar o seed.
+
+-------------------------------------------------
+### 1. Registrar um Novo Usuário (Público)
+-------------------------------------------------
+
+**POST** `/users`
+
+{
+  "name": "Test User",
+  "email": "test.user@example.com",
+  "password": "password123"
+}
+
+-------------------------------------------------
+### 2. Login como Administrador (Público)
+-------------------------------------------------
+
+**POST** `/auth/login`
+
+{
+  "email": "admin@example.com",
+  "password": "password123"
+}
+
+(Copie o `access_token` retornado para usar nas rotas de Admin)
+
+-------------------------------------------------
+### 3. Criar uma Categoria (Admin)
+-------------------------------------------------
+
+**POST** `/categories`
+**Header:** `Authorization: Bearer <admin_token>`
+
+{
+  "name": "Promoções de Verão",
+  "slug": "promocoes-de-verao"
+}
+
+-------------------------------------------------
+### 4. Criar um Produto (Admin)
+-------------------------------------------------
+
+**POST** `/products`
+**Header:** `Authorization: Bearer <admin_token>`
+
+{
+  "name": "Camiseta Básica de Algodão",
+  "description": "Camiseta confortável para o dia a dia.",
+  "sku": "CMST-ALG-01",
+  "stockQuantity": 150,
+  "oldPrice": 59.90,
+  "currentPrice": 49.90,
+  "slug": "camiseta-basica-algodao",
+  "tags": ["verao", "camiseta", "basico"]
+}
+
+-------------------------------------------------
+### 5. Criar um Pedido (Usuário Logado)
+-------------------------------------------------
+
+**POST** `/orders`
+**Header:** `Authorization: Bearer <user_token>`
+
+**Atenção:** Primeiro, use a rota `GET /products` para obter IDs de produtos válidos e substitua abaixo.
+
+{
+  "items": [
+    {
+      "productId": "cmcu03vqp000mqtov2npp45qj",
+      "quantity": 1
+    },
+    {
+      "productId": "cmcu03vqp000nqtovcfikb7y6",
+      "quantity": 2
+    }
+  ]
+}
+
+(Copie o `id` do pedido retornado para usar na próxima etapa)
+
+-------------------------------------------------
+### 6. Atualizar Status de um Pedido (Admin)
+-------------------------------------------------
+
+**PATCH** `/orders/cmcu1p2sx0001qt3fgbvrvlkf`
+**Header:** `Authorization: Bearer <admin_token>`
+
+{
+  "status": "PAID"
+}
+
+-------------------------------------------------
+### 7. Listar Todos os Pedidos (Admin)
+-------------------------------------------------
+
+**GET** `/orders/all/list?page=1&limit=5`
+**Header:** `Authorization: Bearer <admin_token>`
+
+
+-------------------------------------------------
+### 8. Deletar uma Categoria (Admin)
+-------------------------------------------------
+
+**DELETE** `/categories/<category_id_from_db>`
+**Header:** `Authorization: Bearer <admin_token>`
+

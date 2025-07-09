@@ -31,7 +31,7 @@ model User {
   cpf       String?   @unique
   phone     String?
   birthDate DateTime?
-  addresses Adress[]
+  addresses Address[]
 
   //Metadata
   createdAt DateTime @default(now())
@@ -45,7 +45,7 @@ enum UserRole {
   ADMIN
 }
 
-model Adress {
+model Address {
   id           String  @id @default(cuid())
   street       String
   number       String
@@ -69,7 +69,7 @@ model Product {
 
   //Status and stock
   status        ProductStatus @default(ACTIVE)
-  stockQuantity Int           @default(9)
+  stockQuantity Int           @default(0)
 
   //Price
   oldPrice     Decimal @db.Decimal(10, 2)
