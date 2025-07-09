@@ -8,9 +8,10 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Decimal } from 'generated/prisma/runtime/library';
-import { OrderStatus, Prisma } from 'generated/prisma';
+import { Order, OrderStatus, Prisma } from 'generated/prisma';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
+import { paginate } from 'src/common/utils/paginator';
 
 const validTransitions: Record<OrderStatus, OrderStatus[]> = {
   PENDING: ['PAID', 'CANCELED'],
@@ -129,19 +130,26 @@ export class OrdersService {
     });
   }
 
-  findAllByUser(userId: string) {
-    return this.prisma.order.findMany({
-      where: { userId },
-      include: {
-        items: {
-          include: {
-            product: {
-              select: { name: true, slug: true },
+  async findAllByUser(userId: string, pagination: PaginationDto) {
+    return await paginate<Order>(
+      this.prisma.order,
+      {
+        page: pagination.page,
+        limit: pagination.limit,
+      },
+      {
+        where: { userId },
+        include: {
+          items: {
+            include: {
+              product: {
+                select: { name: true, slug: true },
+              },
             },
           },
         },
       },
-    });
+    );
   }
 
   async findOneByUser(id: string, userId: string) {
@@ -196,24 +204,27 @@ export class OrdersService {
     }
   }
 
-  async findAllAdmin(paginationDto: PaginationDto) {
-    const { page = 1, limit = 10 } = paginationDto;
-
-    return this.prisma.order.findMany({
-      take: limit,
-      skip: (page - 1) * limit,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+  async findAllAdmin(pagination: PaginationDto) {
+    return await paginate<Order>(
+      this.prisma.order,
+      {
+        page: pagination.page,
+        limit: pagination.limit,
+      },
+      {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
+        orderBy: {
+          createdAt: 'desc',
+        },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    );
   }
 }

@@ -10,14 +10,14 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { Prisma } from 'generated/prisma';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
-
-type SafeUser = Omit<User, 'password'>;
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { paginate } from 'src/common/utils/paginator';
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: CreateUserDto): Promise<SafeUser> {
+  async create(data: CreateUserDto) {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(data.password, saltRounds);
     const userCount = await this.prisma.user.count();
@@ -80,16 +80,32 @@ export class UsersService {
     }
   }
 
-  async findAll(): Promise<SafeUser[]> {
-    const users = await this.prisma.user.findMany();
-    const safeUsers = users.map((user) => {
+  async findAll(pagination: PaginationDto) {
+    const users = await paginate<User>(
+      this.prisma.user,
+      {
+        page: pagination.page,
+        limit: pagination.limit,
+      },
+      {
+        orderBy: {
+          createdAt: 'desc',
+        },
+      },
+    );
+
+    const safeUsers = users.data.map((user) => {
       const { password: _password, ...safeUser } = user;
       return safeUser;
     });
-    return safeUsers;
+
+    return {
+      ...users,
+      data: safeUsers,
+    };
   }
 
-  async findById(id: string): Promise<SafeUser> {
+  async findById(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
     });
@@ -101,7 +117,7 @@ export class UsersService {
   }
 
   // Internal Only
-  async findByEmail(email: string): Promise<User> {
+  async findByEmail(email: string) {
     const user = await this.prisma.user.findUnique({
       where: { email },
     });

@@ -5,9 +5,11 @@ import {
 } from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Prisma } from 'generated/prisma';
+import { Category, Prisma } from 'generated/prisma';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import slugify from 'slugify';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { paginate } from 'src/common/utils/paginator';
 
 @Injectable()
 export class CategoriesService {
@@ -45,11 +47,19 @@ export class CategoriesService {
     }
   }
 
-  async findAll(user: JwtPayload | undefined) {
-    return await this.prisma.category.findMany({
-      where: user?.role === 'ADMIN' ? undefined : { status: 'VISIBLE' },
-      orderBy: { name: 'asc' },
-    });
+  async findAll(user: JwtPayload | undefined, pagination: PaginationDto) {
+    const whereClause =
+      user?.role === 'ADMIN' ? undefined : { where: { status: 'ACTIVE' } };
+    return paginate<Category>(
+      this.prisma.category,
+      {
+        page: pagination.page,
+        limit: pagination.limit,
+      },
+      {
+        where: whereClause,
+      },
+    );
   }
 
   async findOneById(id: string, user: JwtPayload | undefined) {

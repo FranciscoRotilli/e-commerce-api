@@ -1,14 +1,19 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { Public } from 'src/auth/decorators/public.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { ProductsService } from 'src/products/products.service';
 
 @Controller('categories')
 export class CategoriesController {
-  constructor(private readonly categoriesService: CategoriesService) {}
+  constructor(
+    private readonly categoriesService: CategoriesService,
+    private readonly productsService: ProductsService,
+  ) {}
 
   @Post()
   @Roles('ADMIN')
@@ -18,8 +23,11 @@ export class CategoriesController {
 
   @Get()
   @Public()
-  findAll(@CurrentUser() user: JwtPayload | undefined) {
-    return this.categoriesService.findAll(user);
+  findAll(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.categoriesService.findAll(user, paginationDto);
   }
 
   @Get('id/:id')
@@ -38,6 +46,16 @@ export class CategoriesController {
     @CurrentUser() user: JwtPayload | undefined,
   ) {
     return this.categoriesService.findOneBySlug(slug, user);
+  }
+
+  @Get(':slug/products')
+  @Public()
+  findProductsByCategory(
+    @Param('slug') slug: string,
+    @Query() paginationDto: PaginationDto,
+    @CurrentUser() user: JwtPayload | undefined,
+  ) {
+    return this.productsService.findAllByCategory(slug, paginationDto, user);
   }
 
   @Post(':id/status')

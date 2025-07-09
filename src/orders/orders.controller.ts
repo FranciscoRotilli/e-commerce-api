@@ -32,8 +32,11 @@ export class OrdersController {
 
   @Get()
   @Roles('ADMIN', 'USER')
-  findAllByUser(@CurrentUser() user: JwtPayload) {
-    return this.ordersService.findAllByUser(user.sub);
+  findAllByUser(
+    @CurrentUser() user: JwtPayload,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.ordersService.findAllByUser(user.sub, paginationDto);
   }
 
   @Get(':id')

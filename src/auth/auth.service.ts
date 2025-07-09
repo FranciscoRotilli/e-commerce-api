@@ -14,14 +14,13 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async validateUser(email: string, password: string): Promise<SafeUser> {
+  async validateUser(email: string, password: string) {
     const user = await this.usersService.findByEmail(email);
 
     if (user && (await bcrypt.compare(password, user.password))) {
       const { password: _password, ...result } = user;
       return result;
     }
-
     throw new UnauthorizedException('Invalid credentials');
   }
 

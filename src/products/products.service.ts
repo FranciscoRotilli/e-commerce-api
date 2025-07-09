@@ -6,12 +6,13 @@ import {
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Prisma } from 'generated/prisma';
+import { Prisma, Product, ProductStatus } from 'generated/prisma';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { AddCategoryDto } from './dto/add-category.dto';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { publicProductSelect } from './util/select';
 import { UpdateProductStatusDto } from './dto/update-product-status.dto';
+import { paginate } from 'src/common/utils/paginator';
 
 @Injectable()
 export class ProductsService {
@@ -36,13 +37,20 @@ export class ProductsService {
   }
 
   async findAll(pagination: PaginationDto, user: JwtPayload | undefined) {
-    const { page = 1, limit = 10 } = pagination;
     const select = user?.role === 'ADMIN' ? undefined : publicProductSelect;
-    return await this.prisma.product.findMany({
-      select,
-      take: limit,
-      skip: (page - 1) * limit,
-    });
+    return paginate<Product>(
+      this.prisma.product,
+      {
+        page: pagination.page,
+        limit: pagination.limit,
+      },
+      {
+        select: select,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      },
+    );
   }
 
   async findOneById(id: string, user: JwtPayload | undefined) {
@@ -67,6 +75,34 @@ export class ProductsService {
       throw new NotFoundException(`Product with slug "${slug}" not found.`);
     }
     return product;
+  }
+
+  async findAllByCategory(
+    categoryId: string,
+    pagination: PaginationDto,
+    user: JwtPayload | undefined,
+  ) {
+    const select = user?.role === 'ADMIN' ? undefined : publicProductSelect;
+
+    const whereClause = {
+      categories: { some: { category: { id: categoryId } } },
+      status: ProductStatus.ACTIVE,
+    };
+
+    return paginate<Product>(
+      this.prisma.product,
+      {
+        page: pagination.page,
+        limit: pagination.limit,
+      },
+      {
+        where: whereClause,
+        select: select,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      },
+    );
   }
 
   async update(id: string, updateData: UpdateProductDto) {
