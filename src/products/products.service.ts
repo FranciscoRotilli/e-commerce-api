@@ -6,7 +6,7 @@ import {
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Prisma, ProductStatus } from 'generated/prisma';
+import { Prisma } from 'generated/prisma';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { AddCategoryDto } from './dto/add-category.dto';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
@@ -29,7 +29,7 @@ export class ProductsService {
       ) {
         const field = error.meta?.target?.[0] as string;
         throw new ConflictException(
-          `The ${field} is already in use by another product.`,
+          `This ${field} is already in use by another product.`,
         );
       }
     }
@@ -124,7 +124,7 @@ export class ProductsService {
         error.code === 'P2002'
       ) {
         throw new ConflictException(
-          `This  product is already associated with this category.`,
+          `This product is already associated with this category.`,
         );
       }
       throw error;

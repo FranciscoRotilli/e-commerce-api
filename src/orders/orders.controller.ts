@@ -5,18 +5,17 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   Query,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -43,19 +42,25 @@ export class OrdersController {
     return this.ordersService.findOneByUser(id, user.sub);
   }
 
-  // Admin Exclusive Routes
-
-  @Patch(':id')
-  @Roles('ADMIN')
-  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.ordersService.update(id, updateOrderDto);
+  @Post(':id/cancel')
+  @Roles('ADMIN', 'USER')
+  @HttpCode(HttpStatus.OK)
+  canceledByUser(
+    @Param('id') orderId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.ordersService.canceledByUser(orderId, user);
   }
 
-  @Delete(':id')
+  // Admin Exclusive Routes
+
+  @Patch(':id/status')
   @Roles('ADMIN')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string) {
-    return this.ordersService.remove(id);
+  updateStatus(
+    @Param('id') id: string,
+    @Body() updateOrderStatusDto: UpdateOrderStatusDto,
+  ) {
+    return this.ordersService.updateStatus(id, updateOrderStatusDto);
   }
 
   @Get('all/list')

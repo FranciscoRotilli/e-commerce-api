@@ -1,61 +1,90 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from 'generated/prisma';
+import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
+import slugify from 'slugify';
 
 @Injectable()
 export class CategoriesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createCategoryDto: CreateCategoryDto) {
-    return await this.prisma.category.create({
-      data: createCategoryDto,
-    });
+    const { name, slug } = createCategoryDto;
+
+    const finalSlug =
+      slug ??
+      slugify(name, {
+        lower: true,
+        strict: true,
+        remove: /[*+~.()'"!:@]/g,
+      });
+
+    try {
+      return this.prisma.category.create({
+        data: {
+          name: name,
+          slug: finalSlug,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const field = error.meta?.target?.[0] as string;
+        throw new ConflictException(
+          `This ${field} is already in use by another category.`,
+        );
+      }
+      throw error;
+    }
   }
 
-  async findAll() {
+  async findAll(user: JwtPayload | undefined) {
     return await this.prisma.category.findMany({
+      where: user?.role === 'ADMIN' ? undefined : { status: 'VISIBLE' },
       orderBy: { name: 'asc' },
     });
   }
 
-  async findOne(id: string) {
+  async findOneById(id: string, user: JwtPayload | undefined) {
+    const category = await this.prisma.category.findUnique({
+      where: { id },
+    });
+    if (!category || (category.status === 'HIDDEN' && user?.role !== 'ADMIN')) {
+      throw new NotFoundException(`Category with ID "${id}" not found.`);
+    }
+    return category;
+  }
+
+  async findOneBySlug(slug: string, user: JwtPayload | undefined) {
+    const category = await this.prisma.category.findUnique({
+      where: { slug },
+    });
+    if (!category || (category.status === 'HIDDEN' && user?.role !== 'ADMIN')) {
+      throw new NotFoundException(`Category "${slug}" not found.`);
+    }
+    return category;
+  }
+
+  async switchStatus(id: string) {
     const category = await this.prisma.category.findUnique({
       where: { id },
     });
     if (!category) {
       throw new NotFoundException(`Category with ID "${id}" not found.`);
     }
-    return category;
-  }
-
-  async update(id: string, updateCategoryDto: UpdateCategoryDto) {
-    try {
-      return await this.prisma.category.update({
-        where: { id },
-        data: updateCategoryDto,
-      });
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
-      ) {
-        throw new NotFoundException(`Category with ID "${id}" not found.`);
-      }
-      throw error;
-    }
-  }
-
-  async remove(id: string) {
-    await this.findOne(id);
-    return this.prisma.$transaction([
-      this.prisma.productCategory.deleteMany({
-        where: { categoryId: id },
-      }),
-      this.prisma.category.delete({
-        where: { id },
-      }),
-    ]);
+    return await this.prisma.category.update({
+      where: { id },
+      data:
+        category.status === 'HIDDEN'
+          ? { status: 'VISIBLE' }
+          : { status: 'HIDDEN' },
+    });
   }
 }

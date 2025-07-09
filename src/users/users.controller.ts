@@ -44,12 +44,6 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  @Get('email/:email')
-  @Roles('ADMIN')
-  findByEmail(@Param('email') email: string) {
-    return this.usersService.findByEmail(email);
-  }
-
   @Get(':id')
   @Roles('ADMIN')
   findById(@Param('id') id: string) {

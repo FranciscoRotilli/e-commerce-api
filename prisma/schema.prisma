@@ -105,7 +105,13 @@ model Category {
   id       String            @id @default(cuid())
   name     String            @unique
   slug     String            @unique
+  status   CategoryStatus    @default(VISIBLE)
   products ProductCategory[]
+}
+
+enum CategoryStatus {
+  VISIBLE
+  HIDDEN
 }
 
 model ProductCategory {
@@ -157,4 +163,5 @@ enum OrderStatus {
   SHIPPED
   DELIVERED
   CANCELED
+  RETURNED
 }

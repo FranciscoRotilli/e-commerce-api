@@ -80,17 +80,6 @@ export class UsersService {
     }
   }
 
-  async findByEmail(email: string): Promise<SafeUser> {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
-    if (!user) {
-      throw new NotFoundException(`User with email "${email}" not found.`);
-    }
-    const { password: _password, ...safeUser } = user;
-    return safeUser;
-  }
-
   async findAll(): Promise<SafeUser[]> {
     const users = await this.prisma.user.findMany();
     const safeUsers = users.map((user) => {
@@ -109,5 +98,16 @@ export class UsersService {
     }
     const { password: _password, ...safeUser } = user;
     return safeUser;
+  }
+
+  // Internal Only
+  async findByEmail(email: string): Promise<User> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+    if (!user) {
+      throw new NotFoundException(`User with email "${email}" not found.`);
+    }
+    return user;
   }
 }

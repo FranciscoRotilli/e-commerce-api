@@ -1,17 +1,10 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { Public } from 'src/auth/decorators/public.decorator';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 
 @Controller('categories')
 export class CategoriesController {
@@ -25,28 +18,31 @@ export class CategoriesController {
 
   @Get()
   @Public()
-  findAll() {
-    return this.categoriesService.findAll();
+  findAll(@CurrentUser() user: JwtPayload | undefined) {
+    return this.categoriesService.findAll(user);
   }
 
-  @Get(':id')
+  @Get('id/:id')
   @Public()
-  findOne(@Param('id') id: string) {
-    return this.categoriesService.findOne(id);
-  }
-
-  @Patch(':id')
-  @Roles('ADMIN')
-  update(
+  findOneById(
     @Param('id') id: string,
-    @Body() updateCategoryDto: UpdateCategoryDto,
+    @CurrentUser() user: JwtPayload | undefined,
   ) {
-    return this.categoriesService.update(id, updateCategoryDto);
+    return this.categoriesService.findOneById(id, user);
   }
 
-  @Delete(':id')
+  @Get(':slug')
+  @Public()
+  findOneBySlug(
+    @Param('slug') slug: string,
+    @CurrentUser() user: JwtPayload | undefined,
+  ) {
+    return this.categoriesService.findOneBySlug(slug, user);
+  }
+
+  @Post(':id/status')
   @Roles('ADMIN')
-  remove(@Param('id') id: string) {
-    return this.categoriesService.remove(id);
+  switchStatus(@Param('id') id: string) {
+    return this.categoriesService.switchStatus(id);
   }
 }

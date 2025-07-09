@@ -1,14 +1,25 @@
 import {
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
-import { UpdateOrderDto } from './dto/update-order.dto';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Decimal } from 'generated/prisma/runtime/library';
 import { OrderStatus, Prisma } from 'generated/prisma';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
+
+const validTransitions: Record<OrderStatus, OrderStatus[]> = {
+  PENDING: ['PAID', 'CANCELED'],
+  PAID: ['SHIPPED', 'CANCELED'],
+  SHIPPED: ['DELIVERED', 'CANCELED'],
+  DELIVERED: ['RETURNED'],
+  CANCELED: [],
+  RETURNED: [],
+};
 
 @Injectable()
 export class OrdersService {
@@ -89,6 +100,35 @@ export class OrdersService {
     });
   }
 
+  async canceledByUser(orderId: string, userPayload: JwtPayload) {
+    const order = await this.prisma.order.findUnique({
+      where: {
+        id: orderId,
+        userId: userPayload.sub,
+      },
+    });
+    if (!order) {
+      throw new NotFoundException(
+        `Order with ID "${orderId}" not found or does not belong to the user.`,
+      );
+    }
+    const currentStatus = order.status;
+    const cancelableStatuses: OrderStatus[] = ['PENDING', 'PAID'];
+    if (!cancelableStatuses.includes(currentStatus)) {
+      throw new ForbiddenException(
+        `Cannot cancel an order with status "${currentStatus}".`,
+      );
+    }
+    return this.prisma.order.update({
+      where: {
+        id: orderId,
+      },
+      data: {
+        status: 'CANCELED',
+      },
+    });
+  }
+
   findAllByUser(userId: string) {
     return this.prisma.order.findMany({
       where: { userId },
@@ -119,37 +159,31 @@ export class OrdersService {
     if (!order) {
       throw new NotFoundException(`Order with ID "${id}" not found.`);
     }
+    return order;
   }
 
-  async update(id: string, updateOrderDto: UpdateOrderDto) {
+  async updateStatus(id: string, updateStatus: UpdateOrderStatusDto) {
+    const { status: newStatus } = updateStatus;
     const order = await this.prisma.order.findUnique({
       where: { id },
     });
+
     if (!order) {
       throw new NotFoundException(`Order with ID "${id}" not found.`);
+    }
+    const currentStatus = order.status;
+    const allowedTransitions = validTransitions[currentStatus];
+    if (!allowedTransitions || !allowedTransitions.includes(newStatus)) {
+      throw new UnprocessableEntityException(
+        `Cannot transition order status from ${currentStatus} to ${newStatus}`,
+      );
     }
     try {
       return await this.prisma.order.update({
         where: { id },
         data: {
-          status: updateOrderDto.status,
+          status: newStatus,
         },
-      });
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
-      ) {
-        throw new NotFoundException(`Order with ID "${id}" not found.`);
-      }
-      throw error;
-    }
-  }
-
-  async remove(id: string) {
-    try {
-      await this.prisma.order.delete({
-        where: { id },
       });
     } catch (error) {
       if (
@@ -163,25 +197,23 @@ export class OrdersService {
   }
 
   async findAllAdmin(paginationDto: PaginationDto) {
-    const { page, limit } = paginationDto;
-    if (page && limit) {
-      return this.prisma.order.findMany({
-        take: limit,
-        skip: (page - 1) * limit,
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
+    const { page = 1, limit = 10 } = paginationDto;
+
+    return this.prisma.order.findMany({
+      take: limit,
+      skip: (page - 1) * limit,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
-    }
-    return null;
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
   }
 }
