@@ -17,6 +17,9 @@ import { Public } from 'src/auth/decorators/public.decorator';
 import { Roles } from 'src/auth/decorators/roles.decorator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { AddCategoryDto } from './dto/add-category.dto';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
+import { UpdateProductStatusDto } from './dto/update-product-status.dto';
 
 @Controller('products')
 export class ProductsController {
@@ -30,20 +33,29 @@ export class ProductsController {
 
   @Public()
   @Get()
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.productsService.findAll(paginationDto);
+  findAll(
+    @Query() paginationDto: PaginationDto,
+    @CurrentUser() user: JwtPayload | undefined,
+  ) {
+    return this.productsService.findAll(paginationDto, user);
   }
 
   @Public()
   @Get('id/:id')
-  findOneById(@Param('id') id: string) {
-    return this.productsService.findOneById(id);
+  findOneById(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload | undefined,
+  ) {
+    return this.productsService.findOneById(id, user);
   }
 
   @Public()
   @Get(':slug')
-  findOneBySlug(@Param('slug') slug: string) {
-    return this.productsService.findOneBySlug(slug);
+  findOneBySlug(
+    @Param('slug') slug: string,
+    @CurrentUser() user: JwtPayload | undefined,
+  ) {
+    return this.productsService.findOneBySlug(slug, user);
   }
 
   @Patch('id/:id')
@@ -52,11 +64,13 @@ export class ProductsController {
     return this.productsService.update(id, updateProductDto);
   }
 
-  @Delete('id/:id')
+  @Patch('id/:id/status')
   @Roles('ADMIN')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string) {
-    return this.productsService.remove(id);
+  remove(
+    @Param('id') id: string,
+    @Body() updateProductStatusDto: UpdateProductStatusDto,
+  ) {
+    return this.productsService.updateStatus(id, updateProductStatusDto);
   }
 
   @Post('id/:id/categories')

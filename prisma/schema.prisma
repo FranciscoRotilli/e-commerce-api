@@ -97,6 +97,7 @@ model Product {
 enum ProductStatus {
   ACTIVE
   INACTIVE
+  ARCHIVED
   DRAFT
 }
 
