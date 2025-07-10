@@ -13,6 +13,7 @@ import { Roles } from './decorators/roles.decorator';
 import { Request } from 'express';
 import { Public } from './decorators/public.decorator';
 import { JwtPayload } from './interfaces/jwtPayload.interface';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -33,5 +34,11 @@ export class AuthController {
   @Get('profile')
   getProfile(@Req() request: Request) {
     return this.authService.getProfile(request.user as JwtPayload);
+  }
+
+  @Post('/forgot-password')
+  @Roles('ADMIN', 'USER')
+  forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(forgotPasswordDto.email);
   }
 }

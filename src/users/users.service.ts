@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { Prisma } from 'generated/prisma';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { paginate } from 'src/common/utils/paginator';
 import { SearchUsersDto } from './dto/search-users.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class UsersService {
@@ -62,6 +64,38 @@ export class UsersService {
       throw error;
     }
   }
+
+  async changePassword(userId: string, changePasswordDto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    const isOldPasswordValid = await bcrypt.compare(
+      changePasswordDto.oldPassword,
+      user.password,
+    );
+    if (!isOldPasswordValid) {
+      throw new ForbiddenException('The old password is not correct.');
+    }
+
+    const saltRounds = 10;
+    const newHashedPassword = await bcrypt.hash(
+      changePasswordDto.newPassword,
+      saltRounds,
+    );
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: newHashedPassword },
+    });
+
+    return { message: 'Password updated successfully' };
+  }
+
+  // Admin Exclusive Routes
 
   async updateUserRole(id: string, data: UpdateUserRoleDto) {
     try {
@@ -134,6 +168,7 @@ export class UsersService {
   }
 
   // Internal Only
+
   async findByEmail(email: string) {
     const user = await this.prisma.user.findUnique({
       where: { email },
@@ -142,5 +177,26 @@ export class UsersService {
       throw new NotFoundException(`User with email "${email}" not found.`);
     }
     return user;
+  }
+
+  async update(userId: string, token: string, expires: Date) {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          passwordResetToken: token,
+          passwordResetExpires: expires,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException(`User with ID "${userId}" not found.`);
+      }
+      throw error;
+    }
+    return true;
   }
 }

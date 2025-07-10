@@ -65,6 +65,7 @@ async function main() {
     await prisma.address.create({
       data: {
         userId: user.id,
+        type: 'RESIDENTIAL',
         street: faker.location.streetAddress(),
         number: faker.location.buildingNumber(),
         neighborhood: faker.location.secondaryAddress(),

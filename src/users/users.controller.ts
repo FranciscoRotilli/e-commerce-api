@@ -16,6 +16,7 @@ import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { SearchUsersDto } from './dto/search-users.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('users')
 export class UsersController {
@@ -34,6 +35,15 @@ export class UsersController {
     @Body() updateData: UpdateUserProfileDto,
   ) {
     return this.usersService.updateProfile(user.sub, updateData);
+  }
+
+  @Patch('me/password')
+  @Roles('ADMIN', 'USER')
+  changeMyPassword(
+    @CurrentUser() user: JwtPayload,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    return this.usersService.changePassword(user.sub, changePasswordDto);
   }
 
   // Admin Exclusive Routes

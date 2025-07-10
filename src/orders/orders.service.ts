@@ -27,13 +27,30 @@ export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createOrderDto: CreateOrderDto, userId: string) {
-    const { items } = createOrderDto;
+    const { items, addressId } = createOrderDto;
+
     const productIds = items.map((item) => item.productId);
-    const productsInDb = await this.prisma.product.findMany({
-      where: {
-        id: { in: productIds },
-      },
-    });
+
+    const [productsInDb, address] = await Promise.all([
+      this.prisma.product.findMany({
+        where: {
+          id: { in: productIds },
+        },
+      }),
+      this.prisma.address.findUnique({
+        where: { id: addressId },
+      }),
+    ]);
+
+    if (!address) {
+      throw new NotFoundException(`Address with ID "${addressId}" not found.`);
+    }
+    if (address.userId !== userId) {
+      throw new ForbiddenException(
+        `This addres does not belong to the current user.`,
+      );
+    }
+
     if (productsInDb.length !== productIds.length) {
       const foundProductIds = productsInDb.map((p) => p.id);
       const notFoundIds = productIds.filter(
@@ -78,6 +95,7 @@ export class OrdersService {
       const order = await tx.order.create({
         data: {
           userId: userId,
+          addressId: addressId,
           total: total,
           status: OrderStatus.PENDING,
           items: {
@@ -95,6 +113,7 @@ export class OrdersService {
         },
         include: {
           items: true,
+          address: true,
         },
       });
       return order;
