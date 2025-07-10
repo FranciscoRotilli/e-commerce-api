@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Category, Prisma } from 'generated/prisma';
+import { Prisma } from 'generated/prisma';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import slugify from 'slugify';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
@@ -50,7 +50,7 @@ export class CategoriesService {
   async findAll(user: JwtPayload | undefined, pagination: PaginationDto) {
     const whereClause =
       user?.role === 'ADMIN' ? undefined : { where: { status: 'ACTIVE' } };
-    return paginate<Category>(
+    return paginate(
       this.prisma.category,
       {
         page: pagination.page,

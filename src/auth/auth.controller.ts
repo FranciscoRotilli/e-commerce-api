@@ -5,23 +5,23 @@ import {
   HttpCode,
   HttpStatus,
   Post,
-  Req,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { Roles } from './decorators/roles.decorator';
-import { Request } from 'express';
 import { Public } from './decorators/public.decorator';
 import { JwtPayload } from './interfaces/jwtPayload.interface';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @HttpCode(HttpStatus.OK)
-  @Public()
   @Post('login')
+  @Public()
+  @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto) {
     const validatedUser = await this.authService.validateUser(
       loginDto.email,
@@ -30,15 +30,23 @@ export class AuthController {
     return this.authService.login(validatedUser);
   }
 
-  @Roles('USER', 'ADMIN')
   @Get('profile')
-  getProfile(@Req() request: Request) {
-    return this.authService.getProfile(request.user as JwtPayload);
+  @Roles('USER', 'ADMIN')
+  getProfile(@CurrentUser() user: JwtPayload) {
+    return this.authService.getProfile(user);
   }
 
   @Post('/forgot-password')
-  @Roles('ADMIN', 'USER')
+  @Public()
+  @HttpCode(HttpStatus.OK)
   forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.authService.forgotPassword(forgotPasswordDto.email);
+  }
+
+  @Post('/reset-password')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(resetPasswordDto);
   }
 }

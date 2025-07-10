@@ -19,7 +19,8 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "generated/prisma": ["./generated/prisma"]
-    }
+    },
+    "types": ["node", "multer"]
   },
   "include": ["src/**/*"]
 }

@@ -28,7 +28,7 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
-  @Patch()
+  @Patch('me')
   @Roles('ADMIN', 'USER')
   updateProfile(
     @CurrentUser() user: JwtPayload,

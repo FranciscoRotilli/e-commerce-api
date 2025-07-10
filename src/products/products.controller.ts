@@ -8,6 +8,10 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  UseInterceptors,
+  UploadedFiles,
+  BadRequestException,
+  Delete,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -19,6 +23,10 @@ import { AddCategoryDto } from './dto/add-category.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { UpdateProductStatusDto } from './dto/update-product-status.dto';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { randomBytes } from 'crypto';
+import { extname } from 'path';
 
 @Controller('products')
 export class ProductsController {
@@ -57,6 +65,8 @@ export class ProductsController {
     return this.productsService.findOneBySlug(slug, user);
   }
 
+  // Admin Exclusive Routes
+
   @Patch('id/:id')
   @Roles('ADMIN')
   update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
@@ -80,5 +90,46 @@ export class ProductsController {
     @Body() addCategoryDto: AddCategoryDto,
   ) {
     return this.productsService.addCategory(productId, addCategoryDto);
+  }
+
+  @Post(':id/images')
+  @Roles('ADMIN')
+  @UseInterceptors(
+    FilesInterceptor('file', 5, {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, callback) => {
+          const uniqueSuffix = randomBytes(16).toString('hex');
+          const extension = extname(file.originalname);
+          const filename = `${uniqueSuffix}${extension}`;
+          callback(null, filename);
+        },
+      }),
+      fileFilter: (req, file, callback) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png|gif)$/)) {
+          return callback(
+            new BadRequestException('Only image files are allowed!'),
+            false,
+          );
+        }
+        callback(null, true);
+      },
+    }),
+  )
+  uploadImages(
+    @Param('id') productId: string,
+    @UploadedFiles() files: Array<Express.Multer.File>,
+  ) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('You must upload at least one file.');
+    }
+    return this.productsService.addImages(productId, files);
+  }
+
+  @Delete('images/:imageId')
+  @Roles('ADMIN')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeImage(@Param('imageId') imageId: string) {
+    return this.productsService.removeImage(imageId);
   }
 }

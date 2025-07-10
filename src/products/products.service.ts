@@ -13,6 +13,8 @@ import { publicProductSelect } from './util/select';
 import { UpdateProductStatusDto } from './dto/update-product-status.dto';
 import { paginate } from 'src/common/utils/paginator';
 import { FilterProductsDto } from './dto/filter-product.dto';
+import { join } from 'path';
+import * as fs from 'fs';
 
 @Injectable()
 export class ProductsService {
@@ -198,5 +200,50 @@ export class ProductsService {
       }
       throw error;
     }
+  }
+
+  async addImages(productId: string, files: Array<Express.Multer.File>) {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
+    if (!product) {
+      throw new NotFoundException(`Product with ID "${productId}" not found.`);
+    }
+    const imageData = files.map((file) => ({
+      productId: productId,
+      url: `/uploads/${file.filename}`,
+      altText: file.originalname,
+    }));
+
+    await this.prisma.productImage.createMany({
+      data: imageData,
+    });
+
+    return this.prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        images: true,
+      },
+    });
+  }
+
+  async removeImage(imageId: string) {
+    const image = await this.prisma.productImage.findUnique({
+      where: { id: imageId },
+    });
+    if (!image) {
+      throw new NotFoundException(`Image with ID "${imageId}" not found.`);
+    }
+    await this.prisma.productImage.delete({
+      where: { id: imageId },
+    });
+
+    try {
+      const filePath = join(__dirname, '..', '..', image.url);
+      fs.unlinkSync(filePath);
+    } catch (error) {
+      console.error(`Failed to delete file: ${image.url}`, error);
+    }
+    return;
   }
 }

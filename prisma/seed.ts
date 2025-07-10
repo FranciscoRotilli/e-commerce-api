@@ -1,5 +1,12 @@
-import { Prisma, PrismaClient, UserRole } from '../generated/prisma';
-import { faker } from '@faker-js/faker';
+import {
+  PrismaClient,
+  UserRole,
+  AddressType,
+  AddressStatus,
+  ProductStatus,
+  CategoryStatus,
+  OrderStatus,
+} from '../generated/prisma';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -7,161 +14,178 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Start seeding...');
 
-  // 1. Limpar dados antigos na ordem correta para evitar erros de constraint
-  console.log('Cleaning old data...');
-  await prisma.orderItem.deleteMany({});
-  await prisma.order.deleteMany({});
-  await prisma.productCategory.deleteMany({});
-  await prisma.productImage.deleteMany({});
-  await prisma.address.deleteMany({});
-  await prisma.product.deleteMany({});
-  await prisma.category.deleteMany({});
-  await prisma.user.deleteMany({});
+  // 1. Limpa o banco de dados na ordem correta para evitar erros de constraint
+  await prisma.orderItem.deleteMany();
+  await prisma.productCategory.deleteMany();
+  await prisma.productImage.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.address.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.category.deleteMany();
+  await prisma.user.deleteMany();
+  console.log('Old data cleaned.');
 
-  // 2. Criar Categorias
-  console.log('Creating categories...');
-  const categoriesData = [
-    { name: 'Eletrônicos', slug: 'eletronicos' },
-    { name: 'Roupas Masculinas', slug: 'roupas-masculinas' },
-    { name: 'Roupas Femininas', slug: 'roupas-femininas' },
-    { name: 'Calçados', slug: 'calcados' },
-    { name: 'Acessórios', slug: 'acessorios' },
-  ];
-  const categories = await Promise.all(
-    categoriesData.map((cat) => prisma.category.create({ data: cat })),
-  );
-
-  // 3. Criar Usuários (1 Admin, 4 Comuns)
-  console.log('Creating users...');
+  // 2. Cria os Usuários
   const saltRounds = 10;
-  const usersData: Prisma.UserCreateInput[] = [];
+  const adminPassword = await bcrypt.hash('admin123', saltRounds);
+  const userPassword = await bcrypt.hash('user123', saltRounds);
 
-  // Admin
-  const adminPassword = await bcrypt.hash('password123', saltRounds);
-  usersData.push({
-    name: 'Admin User',
-    email: 'admin@example.com',
-    password: adminPassword,
-    role: UserRole.ADMIN,
+  const adminUser = await prisma.user.create({
+    data: {
+      email: 'admin@email.com',
+      name: 'Admin User',
+      password: adminPassword,
+      role: UserRole.ADMIN,
+    },
   });
 
-  // Usuários comuns
-  for (let i = 0; i < 4; i++) {
-    const userPassword = await bcrypt.hash('password123', saltRounds);
-    usersData.push({
-      name: faker.person.fullName(),
-      email: faker.internet.email().toLowerCase(),
+  const regularUser = await prisma.user.create({
+    data: {
+      email: 'user@email.com',
+      name: 'Regular User',
       password: userPassword,
+      cpf: '12345678900',
+      phone: '51999998888',
       role: UserRole.USER,
-    });
-  }
-  const users = await Promise.all(
-    usersData.map((user) => prisma.user.create({ data: user })),
-  );
+    },
+  });
+  console.log('Users created.');
 
-  // 4. Criar Endereços para os usuários
-  console.log('Creating addresses...');
-  for (const user of users) {
-    await prisma.address.create({
-      data: {
-        userId: user.id,
-        type: 'RESIDENTIAL',
-        street: faker.location.streetAddress(),
-        number: faker.location.buildingNumber(),
-        neighborhood: faker.location.secondaryAddress(),
-        city: faker.location.city(),
-        state: faker.location.state({ abbreviated: true }),
-        zipCode: faker.location.zipCode(),
-        isPrimary: true,
-      },
-    });
-  }
+  // 3. Cria Endereços para o usuário comum
+  const userAddress1 = await prisma.address.create({
+    data: {
+      name: 'Casa',
+      type: AddressType.RESIDENTIAL,
+      street: 'Avenida Borges de Medeiros',
+      number: '123',
+      city: 'Porto Alegre',
+      state: 'RS',
+      zipCode: '90010001',
+      isPrimary: true,
+      userId: regularUser.id,
+    },
+  });
 
-  // 5. Criar Produtos e associá-los a categorias
-  console.log('Creating products...');
-  const productsData: Prisma.ProductCreateInput[] = [];
-  for (let i = 0; i < 30; i++) {
-    const productName = faker.commerce.productName();
-    productsData.push({
-      name: productName,
-      description: faker.commerce.productDescription(),
-      sku: `SKU-${faker.string.alphanumeric(8).toUpperCase()}`,
-      stockQuantity: faker.number.int({ min: 10, max: 100 }),
-      oldPrice: parseFloat(
-        faker.commerce.price({ min: 100, max: 500, dec: 2 }),
-      ),
-      currentPrice: parseFloat(
-        faker.commerce.price({ min: 80, max: 450, dec: 2 }),
-      ),
-      slug: faker.helpers.slugify(productName).toLowerCase(),
-      tags: faker.helpers.arrayElements(
-        ['novo', 'promoção', 'mais-vendido', 'desconto'],
-        { min: 1, max: 3 },
-      ),
-      categories: {
+  const userAddress2 = await prisma.address.create({
+    data: {
+      name: 'Trabalho',
+      type: AddressType.COMMERCIAL,
+      street: 'Rua dos Andradas',
+      number: '1000',
+      city: 'Porto Alegre',
+      state: 'RS',
+      zipCode: '90020000',
+      userId: regularUser.id,
+    },
+  });
+  console.log('Addresses created.');
+
+  // 4. Cria Categorias
+  const categoryTshirts = await prisma.category.create({
+    data: { name: 'Camisetas', slug: 'camisetas' },
+  });
+  const categoryPants = await prisma.category.create({
+    data: { name: 'Calças', slug: 'calcas' },
+  });
+  const categoryHidden = await prisma.category.create({
+    data: {
+      name: 'Acessórios Ocultos',
+      slug: 'acessorios-ocultos',
+      status: CategoryStatus.HIDDEN,
+    },
+  });
+  console.log('Categories created.');
+
+  // 5. Cria Produtos com imagens e categorias
+  const product1 = await prisma.product.create({
+    data: {
+      name: 'Camiseta Básica Branca',
+      description: 'Camiseta de algodão 100% orgânico, cor branca.',
+      sku: 'TS-WHT-001',
+      stockQuantity: 50,
+      oldPrice: 79.9,
+      currentPrice: 59.9,
+      slug: 'camiseta-basica-branca',
+      tags: ['basico', 'verao', 'algodao'],
+      categories: { create: [{ categoryId: categoryTshirts.id }] },
+      images: {
         create: [
           {
-            category: {
-              connect: {
-                id: faker.helpers.arrayElement(categories).id,
-              },
-            },
+            url: '/placeholders/tshirt-white-front.jpg',
+            altText: 'Vista frontal da camiseta branca',
+          },
+          {
+            url: '/placeholders/tshirt-white-back.jpg',
+            altText: 'Vista traseira da camiseta branca',
           },
         ],
       },
-    });
-  }
-  const products = await Promise.all(
-    productsData.map((p) => prisma.product.create({ data: p })),
-  );
+    },
+  });
 
-  // 6. Criar Pedidos e Itens de Pedido
-  console.log('Creating orders...');
-  for (const user of users) {
-    const orderCount = faker.number.int({ min: 1, max: 3 });
-    for (let i = 0; i < orderCount; i++) {
-      const productsInOrder = faker.helpers.arrayElements(products, {
-        min: 1,
-        max: 4,
-      });
-      let orderTotal = 0;
+  const product2 = await prisma.product.create({
+    data: {
+      name: 'Calça Jeans Skinny',
+      description: 'Calça jeans com lavagem escura e corte skinny.',
+      sku: 'JN-SKY-001',
+      stockQuantity: 25,
+      oldPrice: 199.9,
+      currentPrice: 149.9,
+      slug: 'calca-jeans-skinny',
+      tags: ['jeans', 'casual'],
+      categories: { create: [{ categoryId: categoryPants.id }] },
+    },
+  });
 
-      const orderItemsData = productsInOrder.map((product) => {
-        const quantity = faker.number.int({ min: 1, max: 3 });
-        orderTotal += Number(product.currentPrice) * quantity;
-        return {
-          productId: product.id,
-          quantity: quantity,
-          price: product.currentPrice,
-        };
-      });
+  const product3 = await prisma.product.create({
+    data: {
+      name: 'Camiseta Estampada',
+      description: 'Camiseta de algodão com estampa exclusiva.',
+      sku: 'TS-PRT-002',
+      stockQuantity: 0, // Sem estoque
+      status: ProductStatus.INACTIVE,
+      oldPrice: 89.9,
+      currentPrice: 69.9,
+      slug: 'camiseta-estampada',
+      tags: ['estampa', 'arte'],
+      categories: { create: [{ categoryId: categoryTshirts.id }] },
+    },
+  });
+  console.log('Products created.');
 
-      await prisma.order.create({
-        data: {
-          userId: user.id,
-          total: orderTotal,
-          status: faker.helpers.arrayElement(['PENDING', 'PAID', 'SHIPPED']),
-          items: {
-            create: orderItemsData,
+  // 6. Cria um Pedido de exemplo para o usuário comum
+  await prisma.order.create({
+    data: {
+      userId: regularUser.id,
+      addressId: userAddress1.id, // Usa o endereço principal
+      total: 209.8, // 1x 59.90 + 1x 149.90
+      status: OrderStatus.PAID,
+      items: {
+        create: [
+          {
+            productId: product1.id,
+            quantity: 1,
+            price: product1.currentPrice,
           },
-        },
-      });
-    }
-  }
+          {
+            productId: product2.id,
+            quantity: 1,
+            price: product2.currentPrice,
+          },
+        ],
+      },
+    },
+  });
+  console.log('Sample order created.');
 
   console.log('Seeding finished.');
 }
 
-async function runSeed() {
-  try {
-    await main();
-  } catch (error) {
-    console.error('Seeding failed:', error);
+main()
+  .catch((e) => {
+    console.error(e);
     process.exit(1);
-  } finally {
+  })
+  .finally(async () => {
     await prisma.$disconnect();
-    console.log('Prisma client disconnected.');
-  }
-}
-
-void runSeed();
+  });

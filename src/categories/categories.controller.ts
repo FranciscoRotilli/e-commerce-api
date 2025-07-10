@@ -6,14 +6,10 @@ import { Public } from 'src/auth/decorators/public.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
-import { ProductsService } from 'src/products/products.service';
 
 @Controller('categories')
 export class CategoriesController {
-  constructor(
-    private readonly categoriesService: CategoriesService,
-    private readonly productsService: ProductsService,
-  ) {}
+  constructor(private readonly categoriesService: CategoriesService) {}
 
   @Post()
   @Roles('ADMIN')

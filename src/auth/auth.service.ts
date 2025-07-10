@@ -76,7 +76,7 @@ export class AuthService {
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
     const { token, newPassword } = resetPasswordDto;
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findFirst({
       where: {
         passwordResetToken: hashedToken,
         passwordResetExpires: {
