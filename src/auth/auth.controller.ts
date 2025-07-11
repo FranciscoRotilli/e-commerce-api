@@ -14,6 +14,7 @@ import { JwtPayload } from './interfaces/jwtPayload.interface';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { UserRole } from 'generated/prisma';
 
 @Controller('auth')
 export class AuthController {
@@ -31,7 +32,7 @@ export class AuthController {
   }
 
   @Get('profile')
-  @Roles('USER', 'ADMIN')
+  @Roles(UserRole.USER, UserRole.ADMIN)
   getProfile(@CurrentUser() user: JwtPayload) {
     return this.authService.getProfile(user);
   }

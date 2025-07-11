@@ -6,7 +6,7 @@ import {
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Prisma, ProductStatus } from 'generated/prisma';
+import { Prisma, ProductStatus, UserRole } from 'generated/prisma';
 import { AddCategoryDto } from './dto/add-category.dto';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { publicProductSelect } from './util/select';
@@ -35,6 +35,7 @@ export class ProductsService {
           `This ${field} is already in use by another product.`,
         );
       }
+      throw error;
     }
   }
 
@@ -50,10 +51,11 @@ export class ProductsService {
       sortOrder,
     } = pagination;
 
-    const select = user?.role === 'ADMIN' ? undefined : publicProductSelect;
+    const select =
+      user?.role === UserRole.ADMIN ? undefined : publicProductSelect;
     const whereClause: Prisma.ProductWhereInput = {};
 
-    if (user?.role !== 'ADMIN') {
+    if (user?.role !== UserRole.ADMIN) {
       whereClause.status = ProductStatus.ACTIVE;
     }
 
@@ -97,26 +99,48 @@ export class ProductsService {
   }
 
   async findOneById(id: string, user: JwtPayload | undefined) {
-    const select = user?.role === 'ADMIN' ? undefined : publicProductSelect;
+    const select =
+      user?.role === UserRole.ADMIN ? undefined : publicProductSelect;
+
     const product = await this.prisma.product.findUnique({
       where: { id },
       select,
     });
+
     if (!product) {
       throw new NotFoundException(`Product with ID "${id}" not found.`);
     }
+
+    if (
+      user?.role !== UserRole.ADMIN &&
+      product.status !== ProductStatus.ACTIVE
+    ) {
+      throw new NotFoundException(`Product with ID "${id}" not found.`);
+    }
+
     return product;
   }
 
   async findOneBySlug(slug: string, user: JwtPayload | undefined) {
-    const select = user?.role === 'ADMIN' ? undefined : publicProductSelect;
+    const select =
+      user?.role === UserRole.ADMIN ? undefined : publicProductSelect;
+
     const product = await this.prisma.product.findUnique({
       where: { slug },
       select,
     });
+
     if (!product) {
       throw new NotFoundException(`Product with slug "${slug}" not found.`);
     }
+
+    if (
+      user?.role !== UserRole.ADMIN &&
+      product.status !== ProductStatus.ACTIVE
+    ) {
+      throw new NotFoundException(`Product with slug "${slug}" not found.`);
+    }
+
     return product;
   }
 
@@ -140,7 +164,7 @@ export class ProductsService {
       ) {
         const field = error.meta?.target?.[0] as string;
         throw new ConflictException(
-          `The ${field} is already in use by another product.`,
+          `This ${field} is already in use by another product.`,
         );
       }
       throw error;
@@ -203,6 +227,10 @@ export class ProductsService {
   }
 
   async addImages(productId: string, files: Array<Express.Multer.File>) {
+    if (!files || files.length === 0) {
+      throw new NotFoundException('No files provided for upload.');
+    }
+
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
     });
@@ -227,23 +255,26 @@ export class ProductsService {
     });
   }
 
-  async removeImage(imageId: string) {
+  async removeImage(imageId: string): Promise<void> {
     const image = await this.prisma.productImage.findUnique({
       where: { id: imageId },
     });
     if (!image) {
       throw new NotFoundException(`Image with ID "${imageId}" not found.`);
     }
+
     await this.prisma.productImage.delete({
       where: { id: imageId },
     });
 
     try {
-      const filePath = join(__dirname, '..', '..', image.url);
+      const relativePath = image.url.startsWith('/')
+        ? image.url.slice(1)
+        : image.url;
+      const filePath = join(process.cwd(), relativePath);
       fs.unlinkSync(filePath);
     } catch (error) {
       console.error(`Failed to delete file: ${image.url}`, error);
     }
-    return;
   }
 }

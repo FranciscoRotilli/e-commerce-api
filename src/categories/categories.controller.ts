@@ -6,13 +6,14 @@ import { Public } from 'src/auth/decorators/public.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { UserRole } from 'generated/prisma';
 
 @Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Post()
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   create(@Body() createCategoryDto: CreateCategoryDto) {
     return this.categoriesService.create(createCategoryDto);
   }
@@ -45,7 +46,7 @@ export class CategoriesController {
   }
 
   @Post(':id/status')
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   switchStatus(@Param('id') id: string) {
     return this.categoriesService.switchStatus(id);
   }

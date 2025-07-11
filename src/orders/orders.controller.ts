@@ -16,13 +16,14 @@ import { Roles } from 'src/auth/decorators/roles.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { SearchOrdersDto } from './dto/search-order.dto';
+import { UserRole } from 'generated/prisma';
 
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Post()
-  @Roles('ADMIN', 'USER')
+  @Roles(UserRole.ADMIN, UserRole.USER)
   create(
     @Body() createOrderDto: CreateOrderDto,
     @CurrentUser() user: JwtPayload,
@@ -31,7 +32,7 @@ export class OrdersController {
   }
 
   @Get()
-  @Roles('ADMIN', 'USER')
+  @Roles(UserRole.ADMIN, UserRole.USER)
   findAll(
     @CurrentUser() user: JwtPayload,
     @Query() pagination: SearchOrdersDto,
@@ -40,13 +41,13 @@ export class OrdersController {
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'USER')
+  @Roles(UserRole.ADMIN, UserRole.USER)
   findOneByUser(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.ordersService.findOneByUser(id, user.sub);
   }
 
   @Post(':id/cancel')
-  @Roles('ADMIN', 'USER')
+  @Roles(UserRole.ADMIN, UserRole.USER)
   @HttpCode(HttpStatus.OK)
   canceledByUser(
     @Param('id') orderId: string,
@@ -58,7 +59,7 @@ export class OrdersController {
   // Admin Exclusive Routes
 
   @Patch(':id/status')
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   updateStatus(
     @Param('id') id: string,
     @Body() updateOrderStatusDto: UpdateOrderStatusDto,

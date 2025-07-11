@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Prisma } from 'generated/prisma';
+import { Prisma, UserRole, CategoryStatus } from 'generated/prisma';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import slugify from 'slugify';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
@@ -49,7 +49,7 @@ export class CategoriesService {
 
   async findAll(user: JwtPayload | undefined, pagination: PaginationDto) {
     const whereClause =
-      user?.role === 'ADMIN' ? undefined : { where: { status: 'ACTIVE' } };
+      user?.role === UserRole.ADMIN ? {} : { status: CategoryStatus.VISIBLE };
     return paginate(
       this.prisma.category,
       {
@@ -66,7 +66,11 @@ export class CategoriesService {
     const category = await this.prisma.category.findUnique({
       where: { id },
     });
-    if (!category || (category.status === 'HIDDEN' && user?.role !== 'ADMIN')) {
+    if (
+      !category ||
+      (category.status === CategoryStatus.HIDDEN &&
+        user?.role !== UserRole.ADMIN)
+    ) {
       throw new NotFoundException(`Category with ID "${id}" not found.`);
     }
     return category;
@@ -76,7 +80,11 @@ export class CategoriesService {
     const category = await this.prisma.category.findUnique({
       where: { slug },
     });
-    if (!category || (category.status === 'HIDDEN' && user?.role !== 'ADMIN')) {
+    if (
+      !category ||
+      (category.status === CategoryStatus.HIDDEN &&
+        user?.role !== UserRole.ADMIN)
+    ) {
       throw new NotFoundException(`Category "${slug}" not found.`);
     }
     return category;
@@ -92,9 +100,9 @@ export class CategoriesService {
     return await this.prisma.category.update({
       where: { id },
       data:
-        category.status === 'HIDDEN'
-          ? { status: 'VISIBLE' }
-          : { status: 'HIDDEN' },
+        category.status === CategoryStatus.HIDDEN
+          ? { status: CategoryStatus.VISIBLE }
+          : { status: CategoryStatus.HIDDEN },
     });
   }
 }

@@ -18,9 +18,11 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "generated/prisma": ["./generated/prisma"]
+      "generated/prisma": ["./generated/prisma"],
+      "src/*": ["./src/*"]
     },
-    "types": ["node", "multer"]
+    "types": ["node", "multer", "jest"]
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "generated", "jest.config.js"]
 }

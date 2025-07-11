@@ -17,11 +17,12 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class UsersService {
+  private readonly saltRounds = 10;
+
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreateUserDto) {
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(data.password, saltRounds);
+    const hashedPassword = await bcrypt.hash(data.password, this.saltRounds);
     const userCount = await this.prisma.user.count();
     const role = userCount === 0 ? UserRole.ADMIN : UserRole.USER;
     try {
@@ -57,9 +58,15 @@ export class UsersService {
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException(`User with ID "${userId}" not found.`);
+      }
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        throw new ConflictException(`CPF already in use by another account.`);
+        throw new ConflictException('CPF already in use by another account.');
       }
       throw error;
     }
@@ -81,7 +88,7 @@ export class UsersService {
       throw new ForbiddenException('The old password is not correct.');
     }
 
-    const saltRounds = 10;
+    const saltRounds = this.saltRounds;
     const newHashedPassword = await bcrypt.hash(
       changePasswordDto.newPassword,
       saltRounds,

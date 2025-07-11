@@ -27,13 +27,15 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { randomBytes } from 'crypto';
 import { extname } from 'path';
+import { UserRole } from 'generated/prisma';
 
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.CREATED)
   create(@Body() createProductDto: CreateProductDto) {
     return this.productsService.create(createProductDto);
   }
@@ -48,7 +50,7 @@ export class ProductsController {
   }
 
   @Public()
-  @Get('id/:id')
+  @Get(':id')
   findOneById(
     @Param('id') id: string,
     @CurrentUser() user: JwtPayload | undefined,
@@ -57,7 +59,7 @@ export class ProductsController {
   }
 
   @Public()
-  @Get(':slug')
+  @Get('slug/:slug')
   findOneBySlug(
     @Param('slug') slug: string,
     @CurrentUser() user: JwtPayload | undefined,
@@ -67,23 +69,25 @@ export class ProductsController {
 
   // Admin Exclusive Routes
 
-  @Patch('id/:id')
-  @Roles('ADMIN')
+  @Patch(':id')
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
   update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
     return this.productsService.update(id, updateProductDto);
   }
 
-  @Patch('id/:id/status')
-  @Roles('ADMIN')
-  remove(
+  @Patch(':id/status')
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  updateStatus(
     @Param('id') id: string,
     @Body() updateProductStatusDto: UpdateProductStatusDto,
   ) {
     return this.productsService.updateStatus(id, updateProductStatusDto);
   }
 
-  @Post('id/:id/categories')
-  @Roles('ADMIN')
+  @Post(':id/categories')
+  @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.CREATED)
   addCategory(
     @Param('id') productId: string,
@@ -93,7 +97,8 @@ export class ProductsController {
   }
 
   @Post(':id/images')
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(
     FilesInterceptor('file', 5, {
       storage: diskStorage({
@@ -127,7 +132,7 @@ export class ProductsController {
   }
 
   @Delete('images/:imageId')
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
   removeImage(@Param('imageId') imageId: string) {
     return this.productsService.removeImage(imageId);

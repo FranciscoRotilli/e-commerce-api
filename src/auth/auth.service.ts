@@ -99,5 +99,7 @@ export class AuthService {
         passwordResetExpires: null,
       },
     });
+
+    return { message: 'Password has been reset successfully.' };
   }
 }

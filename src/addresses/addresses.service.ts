@@ -15,6 +15,7 @@ export class AddressesService {
         await tx.address.updateMany({
           where: {
             userId: userId,
+            status: AddressStatus.ACTIVE,
           },
           data: {
             isPrimary: false,
@@ -31,10 +32,18 @@ export class AddressesService {
         return newAddress;
       });
     } else {
+      const hasPrimaryAddress = await this.prisma.address.findFirst({
+        where: {
+          userId: userId,
+          isPrimary: true,
+          status: AddressStatus.ACTIVE,
+        },
+      });
+
       return this.prisma.address.create({
         data: {
           ...addressData,
-          isPrimary: false,
+          isPrimary: !hasPrimaryAddress,
           userId: userId,
         },
       });
@@ -43,13 +52,23 @@ export class AddressesService {
 
   async findAll(userId: string) {
     return await this.prisma.address.findMany({
-      where: { userId: userId },
+      where: {
+        userId: userId,
+        status: AddressStatus.ACTIVE,
+      },
+      orderBy: {
+        isPrimary: 'desc',
+      },
     });
   }
 
   async findOne(id: string, userId: string) {
-    const address = await this.prisma.address.findUnique({
-      where: { id, userId: userId },
+    const address = await this.prisma.address.findFirst({
+      where: {
+        id,
+        userId: userId,
+        status: AddressStatus.ACTIVE,
+      },
     });
     if (!address) {
       throw new NotFoundException(`Address with ID "${id}" not found.`);
@@ -58,55 +77,129 @@ export class AddressesService {
   }
 
   async update(id: string, updateAddressDto: UpdateAddressDto, userId: string) {
-    const addresExists = await this.prisma.address.findUnique({
-      where: { id, userId },
+    const addressExists = await this.prisma.address.findFirst({
+      where: {
+        id,
+        userId,
+        status: AddressStatus.ACTIVE,
+      },
     });
 
-    if (!addresExists) {
+    if (!addressExists) {
       throw new NotFoundException(`Address with ID "${id}" not found.`);
     }
 
     const { isPrimary, ...addressData } = updateAddressDto;
-    if (isPrimary) {
+
+    if (isPrimary === true) {
       return this.prisma.$transaction(async (tx) => {
         await tx.address.updateMany({
           where: {
             userId: userId,
+            status: AddressStatus.ACTIVE,
+            id: { not: id },
           },
           data: {
             isPrimary: false,
           },
         });
 
-        const newAddress = await tx.address.update({
-          where: { id, userId },
+        const updatedAddress = await tx.address.update({
+          where: { id },
           data: {
             ...addressData,
             isPrimary: true,
           },
         });
-        return newAddress;
+        return updatedAddress;
+      });
+    } else if (isPrimary === false && addressExists.isPrimary) {
+      return this.prisma.$transaction(async (tx) => {
+        const anotherAddress = await tx.address.findFirst({
+          where: {
+            userId: userId,
+            status: AddressStatus.ACTIVE,
+            id: { not: id },
+          },
+        });
+
+        if (anotherAddress) {
+          await tx.address.update({
+            where: { id: anotherAddress.id },
+            data: { isPrimary: true },
+          });
+        }
+
+        const updatedAddress = await tx.address.update({
+          where: { id },
+          data: {
+            ...addressData,
+            isPrimary: false,
+          },
+        });
+        return updatedAddress;
       });
     } else {
       return this.prisma.address.update({
-        where: { id, userId: userId },
-        data: {
-          ...addressData,
-          isPrimary: false,
-        },
+        where: { id },
+        data: addressData,
       });
     }
   }
 
   async disable(id: string, userId: string) {
     try {
-      return await this.prisma.address.update({
-        where: { id, userId: userId },
-        data: {
-          status: AddressStatus.INACTIVE,
+      const address = await this.prisma.address.findFirst({
+        where: {
+          id,
+          userId,
+          status: AddressStatus.ACTIVE,
         },
       });
+
+      if (!address) {
+        throw new NotFoundException(
+          `Address with ID "${id}" not found or does not belong to the user.`,
+        );
+      }
+
+      if (address.isPrimary) {
+        return this.prisma.$transaction(async (tx) => {
+          const anotherAddress = await tx.address.findFirst({
+            where: {
+              userId: userId,
+              status: AddressStatus.ACTIVE,
+              id: { not: id },
+            },
+          });
+
+          if (anotherAddress) {
+            await tx.address.update({
+              where: { id: anotherAddress.id },
+              data: { isPrimary: true },
+            });
+          }
+
+          return await tx.address.update({
+            where: { id },
+            data: {
+              status: AddressStatus.INACTIVE,
+              isPrimary: false,
+            },
+          });
+        });
+      } else {
+        return await this.prisma.address.update({
+          where: { id },
+          data: {
+            status: AddressStatus.INACTIVE,
+          },
+        });
+      }
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2025'

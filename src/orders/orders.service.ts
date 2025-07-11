@@ -7,8 +7,8 @@ import {
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { Decimal } from 'generated/prisma/runtime/library';
-import { OrderStatus, Prisma } from 'generated/prisma';
+import { Decimal } from '@prisma/client/runtime/library';
+import { OrderStatus, Prisma, UserRole } from 'generated/prisma';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { paginate } from 'src/common/utils/paginator';
 import { SearchOrdersDto } from './dto/search-order.dto';
@@ -47,7 +47,7 @@ export class OrdersService {
     }
     if (address.userId !== userId) {
       throw new ForbiddenException(
-        `This addres does not belong to the current user.`,
+        `This address does not belong to the current user.`,
       );
     }
 
@@ -133,7 +133,10 @@ export class OrdersService {
       );
     }
     const currentStatus = order.status;
-    const cancelableStatuses: OrderStatus[] = ['PENDING', 'PAID'];
+    const cancelableStatuses: OrderStatus[] = [
+      OrderStatus.PENDING,
+      OrderStatus.PAID,
+    ];
     if (!cancelableStatuses.includes(currentStatus)) {
       throw new ForbiddenException(
         `Cannot cancel an order with status "${currentStatus}".`,
@@ -144,7 +147,7 @@ export class OrdersService {
         id: orderId,
       },
       data: {
-        status: 'CANCELED',
+        status: OrderStatus.CANCELED,
       },
     });
   }
@@ -164,7 +167,7 @@ export class OrdersService {
 
     const whereClause: Prisma.OrderWhereInput = {};
 
-    if (user.role === 'ADMIN') {
+    if (user.role === UserRole.ADMIN) {
       if (userId) {
         whereClause.userId = userId;
       }

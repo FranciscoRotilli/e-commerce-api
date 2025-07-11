@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -17,6 +19,7 @@ import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { SearchUsersDto } from './dto/search-users.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UserRole } from 'generated/prisma';
 
 @Controller('users')
 export class UsersController {
@@ -24,12 +27,13 @@ export class UsersController {
 
   @Post()
   @Public()
+  @HttpCode(HttpStatus.CREATED)
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
   @Patch('me')
-  @Roles('ADMIN', 'USER')
+  @Roles(UserRole.ADMIN, UserRole.USER)
   updateProfile(
     @CurrentUser() user: JwtPayload,
     @Body() updateData: UpdateUserProfileDto,
@@ -38,7 +42,8 @@ export class UsersController {
   }
 
   @Patch('me/password')
-  @Roles('ADMIN', 'USER')
+  @Roles(UserRole.ADMIN, UserRole.USER)
+  @HttpCode(HttpStatus.OK)
   changeMyPassword(
     @CurrentUser() user: JwtPayload,
     @Body() changePasswordDto: ChangePasswordDto,
@@ -49,7 +54,8 @@ export class UsersController {
   // Admin Exclusive Routes
 
   @Patch(':id/role')
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
   updateUserRole(
     @Param('id') id: string,
     @Body() updateUserRoleDto: UpdateUserRoleDto,
@@ -58,13 +64,13 @@ export class UsersController {
   }
 
   @Get()
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   findAll(@Query() pagination: SearchUsersDto) {
     return this.usersService.findAll(pagination);
   }
 
   @Get(':id')
-  @Roles('ADMIN')
+  @Roles(UserRole.ADMIN)
   findById(@Param('id') id: string) {
     return this.usersService.findById(id);
   }
