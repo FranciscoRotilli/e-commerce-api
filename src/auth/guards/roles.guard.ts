@@ -1,13 +1,14 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-import { User, UserRole } from 'generated/prisma';
-
-type SafeUser = Omit<User, 'password'>;
-
-interface RequestWithUser extends Request {
-  user: SafeUser;
-}
+import { UserRole } from 'generated/prisma';
+import { RequestWithAuthUser } from '../../common/interfaces/request-with-user.interface';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -18,17 +19,23 @@ export class RolesGuard implements CanActivate {
       ROLES_KEY,
       [context.getHandler(), context.getClass()],
     );
-    if (!requiredRoles) {
+
+    if (!requiredRoles || requiredRoles.length === 0) {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<RequestWithUser>();
+    const request = context.switchToHttp().getRequest<RequestWithAuthUser>();
     const user = request.user;
 
-    if (!user) {
-      return false;
+    if (!user || typeof user !== 'object' || !user.role) {
+      throw new UnauthorizedException('User not authenticated');
     }
 
-    return requiredRoles.some((role) => user.role === role);
+    const hasRequiredRole = requiredRoles.some((role) => user.role === role);
+    if (!hasRequiredRole) {
+      throw new ForbiddenException('Insufficient permissions');
+    }
+
+    return true;
   }
 }
