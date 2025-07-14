@@ -333,7 +333,7 @@ This is a summary of the main available routes. Refer to the DTO files for all a
 
 ## 🌱 TBD / Future Features
 
-- Implement **Unit and Integration Tests**
+- Implement **Unit and Integration Tests** // DONE
 - Add **Docker Production Optimizations** (multi-stage builds, health checks)
 - Implement **CI/CD Pipeline** with Docker deployment
 - Add **Kubernetes** deployment manifests
