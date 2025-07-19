@@ -27,60 +27,45 @@ export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(createOrderDto: CreateOrderDto, userId: string) {
-    const { items, addressId } = createOrderDto;
+    const { addressId } = createOrderDto;
 
-    const productIds = items.map((item) => item.productId);
-
-    const [productsInDb, address] = await Promise.all([
-      this.prisma.product.findMany({
-        where: {
-          id: { in: productIds },
+    const cart = await this.prisma.cart.findUnique({
+      where: { userId },
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
         },
-      }),
-      this.prisma.address.findUnique({
-        where: { id: addressId },
-      }),
-    ]);
-
-    if (!address) {
-      throw new NotFoundException(`Address with ID "${addressId}" not found.`);
+      },
+    });
+    if (!cart || cart.items.length === 0) {
+      throw new UnprocessableEntityException('Your cart is empty.');
     }
-    if (address.userId !== userId) {
+
+    const address = await this.prisma.address.findUnique({
+      where: { id: addressId },
+    });
+    if (!address || address.userId !== userId) {
       throw new ForbiddenException(
-        `This address does not belong to the current user.`,
-      );
-    }
-
-    if (productsInDb.length !== productIds.length) {
-      const foundProductIds = productsInDb.map((p) => p.id);
-      const notFoundIds = productIds.filter(
-        (id) => !foundProductIds.includes(id),
-      );
-      throw new NotFoundException(
-        `Products with IDs "${notFoundIds.join(', ')}" not found.`,
+        'This address does not belong to the current user.',
       );
     }
 
     return this.prisma.$transaction(async (tx) => {
       let total = new Decimal(0);
 
-      for (const item of items) {
-        const product = productsInDb.find((p) => p.id === item.productId);
-
-        if (!product) {
-          throw new NotFoundException(
-            `Product with ID "${item.productId}" not found.`,
-          );
-        }
+      for (const item of cart.items) {
+        const product = item.product;
 
         if (product.stockQuantity < item.quantity) {
           throw new UnprocessableEntityException(
-            `Insufficient stock of item "${product.name}"`,
+            `Insufficient stock for product "${product.name}". Only ${product.stockQuantity} available.`,
           );
         }
 
         await tx.product.update({
-          where: { id: item.productId },
+          where: { id: product.id },
           data: {
             stockQuantity: {
               decrement: item.quantity,
@@ -99,21 +84,22 @@ export class OrdersService {
           total: total,
           status: OrderStatus.PENDING,
           items: {
-            create: items.map((item) => {
-              const product = productsInDb.find(
-                (p) => p.id === item.productId,
-              )!;
-              return {
-                productId: item.productId,
-                quantity: item.quantity,
-                price: product.currentPrice,
-              };
-            }),
+            create: cart.items.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.product.currentPrice,
+            })),
           },
         },
         include: {
           items: true,
           address: true,
+        },
+      });
+
+      await tx.cartItem.deleteMany({
+        where: {
+          cartId: cart.id,
         },
       });
       return order;

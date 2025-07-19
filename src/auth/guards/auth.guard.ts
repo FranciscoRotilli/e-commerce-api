@@ -48,10 +48,6 @@ export class AuthGuard implements CanActivate {
       ) {
         throw error;
       }
-
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
-      console.error('JWT verification failed:', errorMessage);
       throw new UnauthorizedException('Invalid token');
     }
     return true;

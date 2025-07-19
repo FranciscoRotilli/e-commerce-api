@@ -23,6 +23,6 @@
     },
     "types": ["node", "multer", "jest"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "test/**/*"],
   "exclude": ["node_modules", "generated", "jest.config.js"]
 }

@@ -46,7 +46,7 @@ export class AuthService {
     const message =
       'If an account is associated with this email, you should receive instructions to reset your password.';
     if (!user) {
-      return message;
+      return { message };
     }
 
     const resetToken = crypto.randomBytes(32).toString('hex');
@@ -69,7 +69,7 @@ export class AuthService {
       console.log('EMAIL DE RECUPERAÇÃO DE SENHA (SIMULAÇÃO)');
       console.log(`Use este token para resetar a senha: ${resetToken}`);
       console.log('----------------------------------------------------');
-      return message;
+      return { message };
     }
   }
 

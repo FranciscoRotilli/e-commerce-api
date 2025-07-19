@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -38,6 +32,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   orders Order[]
+  Cart Cart?
 }
 
 enum UserRole {
@@ -107,6 +102,7 @@ model Product {
   updatedAt DateTime    @updatedAt
   
   OrderItem OrderItem[]
+  CartItem CartItem[]
 }
 
 enum ProductStatus {
@@ -180,4 +176,24 @@ enum OrderStatus {
   DELIVERED
   CANCELED
   RETURNED
+}
+
+model Cart {
+  id          String      @id @default(cuid())
+  user        User        @relation(fields: [userId], references: [id])
+  userId      String      @unique
+  items       CartItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model CartItem {
+  id          String      @id @default(cuid())
+  cart        Cart        @relation(fields: [cartId], references: [id])
+  cartId      String
+  product     Product     @relation(fields: [productId], references: [id])
+  productId   String
+  quantity    Int
+
+  @@unique([cartId, productId])
 }
