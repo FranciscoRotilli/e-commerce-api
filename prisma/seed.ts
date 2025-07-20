@@ -2,7 +2,6 @@ import {
   PrismaClient,
   UserRole,
   AddressType,
-  AddressStatus,
   ProductStatus,
   CategoryStatus,
   OrderStatus,
@@ -30,7 +29,7 @@ async function main() {
   // 2. Create Users (Admin + Multiple Regular Users)
   const saltRounds = 10;
   const adminPassword = await bcrypt.hash('admin123', saltRounds);
-  const userPassword = await bcrypt.hash('user123', saltRounds);
+  const userPassword = await bcrypt.hash('userpass123', saltRounds);
 
   const adminUser = await prisma.user.create({
     data: {

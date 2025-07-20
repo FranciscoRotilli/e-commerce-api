@@ -44,7 +44,7 @@ export class ProductsService {
       page,
       limit,
       search,
-      categoryId,
+      categorySlug,
       minPrice,
       maxPrice,
       sortBy,
@@ -68,8 +68,14 @@ export class ProductsService {
       ];
     }
 
-    if (categoryId) {
-      whereClause.categories = { some: { categoryId: categoryId } };
+    if (categorySlug) {
+      whereClause.categories = {
+        some: {
+          category: {
+            slug: categorySlug,
+          },
+        },
+      };
     }
 
     if (minPrice !== undefined || maxPrice !== undefined) {

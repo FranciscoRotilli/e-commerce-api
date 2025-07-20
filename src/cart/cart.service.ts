@@ -153,6 +153,21 @@ export class CartService {
         );
       }
 
+      const cartItemExists = await this.prisma.cartItem.findUnique({
+        where: {
+          cartId_productId: {
+            cartId: cart.id,
+            productId: productId,
+          },
+        },
+      });
+
+      if (!cartItemExists) {
+        throw new NotFoundException(
+          `Product with ID "${productId}" not found in cart.`,
+        );
+      }
+
       await tx.cartItem.update({
         where: {
           cartId_productId: {

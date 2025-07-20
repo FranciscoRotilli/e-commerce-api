@@ -38,7 +38,11 @@ export class AuthService {
   }
 
   getProfile(userPayload: JwtPayload) {
-    return userPayload;
+    return {
+      sub: userPayload.sub,
+      email: userPayload.email,
+      role: userPayload.role,
+    };
   }
 
   async forgotPassword(email: string) {

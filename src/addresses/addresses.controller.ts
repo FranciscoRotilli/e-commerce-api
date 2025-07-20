@@ -8,7 +8,6 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
-  ParseUUIDPipe,
 } from '@nestjs/common';
 import { AddressesService } from './addresses.service';
 import { CreateAddressDto } from './dto/create-address.dto';
@@ -37,17 +36,14 @@ export class AddressesController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.addressesService.findOne(id, user.sub);
   }
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() updateAddressDto: UpdateAddressDto,
     @CurrentUser() user: JwtPayload,
   ) {
@@ -56,10 +52,7 @@ export class AddressesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  disable(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: JwtPayload,
-  ) {
+  disable(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.addressesService.disable(id, user.sub);
   }
 }

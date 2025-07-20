@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  Matches,
   Min,
 } from 'class-validator';
 
@@ -35,6 +36,8 @@ export class CreateProductDto {
 
   @IsString()
   @IsNotEmpty()
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+  @IsOptional()
   slug: string;
 
   @IsArray()

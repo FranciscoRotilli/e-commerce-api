@@ -107,12 +107,6 @@ describe('OrdersService', () => {
 
   describe('create', () => {
     const createOrderDto: CreateOrderDto = {
-      items: [
-        {
-          productId: 'product-1',
-          quantity: 2,
-        },
-      ],
       addressId: 'address-1',
     };
 

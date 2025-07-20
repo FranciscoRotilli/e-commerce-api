@@ -161,7 +161,7 @@ describe('ProductsService', () => {
         page: 1,
         limit: 10,
         search: 'product',
-        categoryId: 'cat-1',
+        categorySlug: 'electronics',
         minPrice: 50,
         maxPrice: 150,
         sortBy: 'name',
@@ -179,7 +179,7 @@ describe('ProductsService', () => {
           where: expect.objectContaining({
             status: ProductStatus.ACTIVE,
             OR: expect.any(Array),
-            categories: { some: { categoryId: 'cat-1' } },
+            categories: { some: { category: { slug: 'electronics' } } },
             currentPrice: { gte: 50, lte: 150 },
           }),
           select: expect.any(Object),

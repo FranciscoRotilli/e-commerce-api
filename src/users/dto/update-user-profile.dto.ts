@@ -1,9 +1,5 @@
-import {
-  IsDateString,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsDate, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class UpdateUserProfileDto {
   @IsString()
@@ -21,7 +17,8 @@ export class UpdateUserProfileDto {
   @IsOptional()
   phone?: string;
 
-  @IsDateString()
   @IsOptional()
+  @Type(() => Date)
+  @IsDate()
   birthDate?: Date;
 }

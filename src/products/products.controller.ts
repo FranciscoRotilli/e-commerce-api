@@ -18,11 +18,11 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Public } from 'src/auth/decorators/public.decorator';
 import { Roles } from 'src/auth/decorators/roles.decorator';
-import { PaginationDto } from 'src/common/dto/pagination.dto';
 import { AddCategoryDto } from './dto/add-category.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import { JwtPayload } from 'src/auth/interfaces/jwtPayload.interface';
 import { UpdateProductStatusDto } from './dto/update-product-status.dto';
+import { FilterProductsDto } from './dto/filter-product.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { randomBytes } from 'crypto';
@@ -43,10 +43,10 @@ export class ProductsController {
   @Public()
   @Get()
   findAll(
-    @Query() paginationDto: PaginationDto,
+    @Query() filterDto: FilterProductsDto,
     @CurrentUser() user: JwtPayload | undefined,
   ) {
-    return this.productsService.findAll(paginationDto, user);
+    return this.productsService.findAll(filterDto, user);
   }
 
   @Public()

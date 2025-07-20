@@ -1,18 +1,11 @@
 import { Type } from 'class-transformer';
-import {
-  IsEnum,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Min,
-} from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 export class FilterProductsDto extends PaginationDto {
   @IsOptional()
-  @IsUUID()
-  categoryId?: string;
+  @IsString()
+  categorySlug?: string;
 
   @IsOptional()
   @IsNumber()

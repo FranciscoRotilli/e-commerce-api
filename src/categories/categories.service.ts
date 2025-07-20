@@ -27,21 +27,20 @@ export class CategoriesService {
       });
 
     try {
-      return this.prisma.category.create({
+      return await this.prisma.category.create({
         data: {
           name: name,
           slug: finalSlug,
         },
       });
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        const field = error.meta?.target?.[0] as string;
-        throw new ConflictException(
-          `This ${field} is already in use by another category.`,
-        );
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          const field = error.meta?.target?.[0] as string;
+          throw new ConflictException(
+            `This ${field} is already in use by another category.`,
+          );
+        }
       }
       throw error;
     }
